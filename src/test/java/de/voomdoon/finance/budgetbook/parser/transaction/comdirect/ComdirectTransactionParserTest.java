@@ -225,15 +225,26 @@ class ComdirectTransactionParserTest {
 		/**
 		 * @since 0.1.0
 		 */
-		@Disabled("TODO")
 		@Test
-		void test_value_what_resultLineBreak() throws Exception {
+		void test_value_what_removeLikeBreak_Einkauf() throws Exception {
 			logTestStart();
 
 			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf");
 
-			// TODO implement test_value_what_resultLineBreak
-			throw new UnsupportedOperationException("Method 'test_value_what_resultLineBreak' not implemented yet");
+			assertThat(actuals).element(31).extracting(BankStatementTransaction::getWhat).asString()
+					.contains("Einkauf");
+		}
+
+		/**
+		 * @since 0.1.0
+		 */
+		@Test
+		void test_value_what_removeLikeBreak_length() throws Exception {
+			logTestStart();
+
+			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf");
+
+			assertThat(actuals).element(28).extracting(BankStatementTransaction::getWhat).asString().contains("7027");
 		}
 
 		/**

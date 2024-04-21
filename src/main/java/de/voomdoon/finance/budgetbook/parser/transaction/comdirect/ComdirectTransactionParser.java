@@ -171,8 +171,8 @@ public class ComdirectTransactionParser {
 				break;
 			}
 
-			// if (current.pageIndex() == 3) {
-			// logger.warn("DEBUG break");
+			// if (current.pageIndex() == 4) {
+			// logger.error("DEBUG break");
 			// break;
 			// }
 		}
@@ -200,7 +200,37 @@ public class ComdirectTransactionParser {
 			}
 
 			lastEnd = addTransactionsFromAccount(result, account, lastEnd);
+
+			// logger.error("DEBUG break");
+			// return;
 		}
+	}
+
+	/**
+	 * DOCME add JavaDoc for method cleanWhat
+	 * 
+	 * @param raw
+	 * @return
+	 * @since DOCME add inception version number
+	 */
+	private String cleanWhat(String raw) {
+		String[] split = raw.split("\r\n");
+
+		StringBuilder sb = new StringBuilder();
+
+		for (String s : split) {
+			sb.append(s);
+
+			if (s.length() < 35) {
+				sb.append(" ");
+			}
+		}
+
+		if (sb.charAt(sb.length() - 1) == ' ') {
+			sb.deleteCharAt(sb.length() - 1);
+		}
+
+		return sb.toString();
 	}
 
 	/**
@@ -376,7 +406,7 @@ public class ComdirectTransactionParser {
 
 		BankStatementTransaction transaction = new BankStatementTransaction();
 
-		int xDateRight = 110;
+		int xDateRight = 113;
 
 		int yBookingDate = findHeightFromTop(reader, lastEnd.pageIndex(), ".", 0, xDateRight, lastEnd.y() - 1);
 
@@ -411,7 +441,7 @@ public class ComdirectTransactionParser {
 		int height = yBookingDate - yNext;
 
 		int xOtherAccountLeft = 185;
-		int xOtherAccountRight = 300;
+		int xOtherAccountRight = 309;
 
 		String otherAccount = readText(lastEnd.pageIndex(),
 				new Rectangle(xOtherAccountLeft, yNext + 1, xOtherAccountRight - xOtherAccountLeft, height));
@@ -475,11 +505,11 @@ public class ComdirectTransactionParser {
 
 		if (endToEndRefIndex == -1) {
 			logger.debug("endToEndRefIndex: " + endToEndRefIndex);
-			transaction.setWhat(details);
+			transaction.setWhat(cleanWhat(details));
 
 			return;
 		} else {
-			transaction.setWhat(details.substring(0, endToEndRefIndex).trim());
+			transaction.setWhat(cleanWhat(details.substring(0, endToEndRefIndex).trim()));
 		}
 
 		int mandateIndex = details.indexOf("CORE / Mandatsref.:");
