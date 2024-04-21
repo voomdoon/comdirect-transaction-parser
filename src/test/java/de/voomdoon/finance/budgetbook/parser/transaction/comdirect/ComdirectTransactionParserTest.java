@@ -2,11 +2,14 @@ package de.voomdoon.finance.budgetbook.parser.transaction.comdirect;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Nested;
@@ -35,15 +38,37 @@ class ComdirectTransactionParserTest {
 	@Nested
 	class ParseTransactionsTest extends TestBase {
 
-		/**
-		 * @since 0.1.0
-		 */
-		private static Exception exception;
+		private record Result(List<BankStatementTransaction> data, Exception exception) {
+		}
 
 		/**
 		 * @since 0.1.0
 		 */
-		private static List<BankStatementTransaction> result;
+		private static final Map<String, Result> RESULTS = new HashMap<>();
+
+		/**
+		 * @since 0.1.0
+		 */
+		@Test
+		void test_read_endOfAccount() throws Exception {
+			logTestStart();
+
+			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2018-03-01.pdf");
+
+			assertThat(actuals).element(39).extracting(BankStatementTransaction::getAmount).isEqualTo(2182L);
+		}
+
+		/**
+		 * @since 0.1.0
+		 */
+		@Test
+		void test_read_endOfAccountAtPageEnd() throws Exception {
+			logTestStart();
+
+			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2018-04-03.pdf");
+
+			assertThat(actuals).element(29).extracting(BankStatementTransaction::getAmount).isEqualTo(-990L);
+		}
 
 		/**
 		 * @since 0.1.0
@@ -268,22 +293,40 @@ class ComdirectTransactionParserTest {
 		 * @since 0.1.0
 		 */
 		private List<BankStatementTransaction> parseTransactions(String input) throws Exception {
-			// TODO add explicit cache
-			if (result != null) {
-				return result;
-			} else if (exception != null) {
-				throw exception;
+			Result result = RESULTS.computeIfAbsent(input, key -> parseTransactionsInternal(input));
+
+			if (result.exception() != null) {
+				throw result.exception();
 			}
 
+			return result.data();
+		}
+
+		/**
+		 * DOCME add JavaDoc for method parseTransactionsInternal
+		 * 
+		 * @param input
+		 * @return
+		 * @since DOCME add inception version number
+		 */
+		private Result parseTransactionsInternal(String input) {
 			Path source = Path.of(
 					"C:/workspaces/vd/public-finance/comdirect-transaction-parser-private-test-data/src/test/resources",
 					input);
-			Path target = Path.of(getTempDirectory().toString(), "input.pdf");
-			Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
+			Path target;
+
+			try {
+				target = Path.of(getTempDirectory().toString(), "input.pdf");
+				Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
+			} catch (IOException e) {
+				// TODO implement error handling
+				throw new RuntimeException("Error at 'parseTransactionsInternal': " + e.getMessage(), e);
+			}
 
 			ComdirectTransactionParser parser = new ComdirectTransactionParser(target.toString());
 
-			exception = null;
+			List<BankStatementTransaction> result = null;
+			Exception exception = null;
 
 			try {
 				result = parser.parseTransactions();
@@ -300,12 +343,12 @@ class ComdirectTransactionParserTest {
 			}
 
 			if (exception != null) {
-				throw exception;
+				return new Result(null, exception);
 			}
 
 			logger.debug("result:\n\t" + result.stream().map(Object::toString).collect(Collectors.joining("\n\t")));
 
-			return result;
+			return new Result(result, exception);
 		}
 	}
 }

@@ -66,6 +66,11 @@ public class ComdirectTransactionParser {
 	private static final int Y_MIN = 50;
 
 	/**
+	 * @since DOCME add inception version number
+	 */
+	private static final int Y_TOP = 720;
+
+	/**
 	 * DOCME add JavaDoc for method translate
 	 * 
 	 * @param rectangle
@@ -73,7 +78,7 @@ public class ComdirectTransactionParser {
 	 * @param dy
 	 * @return
 	 * @since 0.1.0
-	 * @deprecated TODO move to some awl util or find framework
+	 * @deprecated TODO move to some awt util or find framework
 	 */
 	@Deprecated
 	private static Rectangle translate(Rectangle rectangle, int dx, int dy) {
@@ -155,6 +160,11 @@ public class ComdirectTransactionParser {
 	private LastEnd addTransactionsFromAccount(List<BankStatementTransaction> result, Account account, LastEnd lastEnd)
 			throws IOException {
 		logger.debug("addTransactionsFromAccount " + account + " " + lastEnd);
+
+		if (lastEnd.y() == -1) {
+			lastEnd = new LastEnd(lastEnd.pageIndex(), Y_TOP);
+		}
+
 		int yStart = findHeightFromTop(reader, lastEnd.pageIndex(), account.name(), 50, 300, lastEnd.y());
 		int yOffsetOptimization = 40;
 		yStart = findHeightFromTop(reader, lastEnd.pageIndex(), "Alter Saldo", 55, 110, yStart - yOffsetOptimization);
@@ -168,6 +178,12 @@ public class ComdirectTransactionParser {
 			LastEnd temp = current;
 			int yNewBalance = newBalanceYCache.computeIfAbsent(current.pageIndex,
 					key -> findHeightFromTop(reader, temp.pageIndex(), "Neuer Saldo", xLeft, 110, temp.y()));
+			logger.debug("yNewBalance: " + yNewBalance);
+
+			if (current.y() == -1 && yNewBalance == -1) {
+				logger.info("done with account (no transactions) " + account + " (current: " + current + ")");
+				break;
+			}
 
 			current = maybeAddTransaction(result, account, current, yNewBalance);
 			logger.debug("current: " + current);
@@ -411,7 +427,9 @@ public class ComdirectTransactionParser {
 			logger.debug("last transaction of page reached");
 			yNext = 60;
 			last = true;
-		} else if (yNext < yBottom) {
+		}
+
+		if (yNext < yBottom) {
 			logger.debug("adjusting yNext to yBottom=" + yBottom);
 			yNext = yBottom;
 		}
@@ -419,7 +437,7 @@ public class ComdirectTransactionParser {
 		int height = yBookingDate - yNext;
 
 		int xOtherAccountLeft = 185;
-		int xOtherAccountRight = 309;
+		int xOtherAccountRight = 308;
 
 		String otherAccount = readText(lastEnd.pageIndex(),
 				new Rectangle(xOtherAccountLeft, yNext + 1, xOtherAccountRight - xOtherAccountLeft, height), true);
@@ -427,7 +445,7 @@ public class ComdirectTransactionParser {
 		logger.debug("otherAccount: '" + otherAccount + "'");
 		transaction.setOtherAccount(otherAccount);
 
-		int xDetailsLeft = 300;
+		int xDetailsLeft = xOtherAccountRight;
 		int xDetailsRight = 500;
 		String details = readText(lastEnd.pageIndex(),
 				new Rectangle(xDetailsLeft, yNext + 1, xDetailsRight - xDetailsLeft, height), true);
@@ -435,7 +453,7 @@ public class ComdirectTransactionParser {
 
 		processDetails(details, transaction);
 
-		int xAmountLeft = 500;
+		int xAmountLeft = xDetailsRight;
 		int xAmountRight = 560;
 		String amount = readText(lastEnd.pageIndex(),
 				new Rectangle(xAmountLeft, yNext + 1, xAmountRight - xAmountLeft, height), true);
@@ -446,9 +464,12 @@ public class ComdirectTransactionParser {
 		result.add(transaction);
 
 		if (last) {
-			logger.info("page end reached");
-			return new LastEnd(lastEnd.pageIndex() + 1, 720);
+			if (yNext == yBottom) {
+				return new LastEnd(lastEnd.pageIndex() + 1, -1);
+			}
 
+			logger.info("page end reached");
+			return new LastEnd(lastEnd.pageIndex() + 1, Y_TOP);
 		}
 
 		return new LastEnd(lastEnd.pageIndex(), yNext + 1);
