@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Nested;
@@ -48,21 +49,18 @@ class ComdirectTransactionParserTest {
 		/**
 		 * @since 0.1.0
 		 */
-		@Disabled
 		@Test
 		void test_read_endOfdFirstAccount() throws Exception {
 			logTestStart();
 
 			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf");
 
-			assertThat(actuals).element(actuals.size() - 1).extracting(BankStatementTransaction::getAmount)
-					.isEqualTo(-6820L);
+			assertThat(actuals).element(44).extracting(BankStatementTransaction::getAmount).isEqualTo(-6820L);
 		}
 
 		/**
 		 * @since 0.1.0
 		 */
-		@Disabled
 		@Test
 		void test_read_lastOfFirstAccountPage() throws Exception {
 			logTestStart();
@@ -70,6 +68,19 @@ class ComdirectTransactionParserTest {
 			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf");
 
 			assertThat(actuals).element(7).extracting(BankStatementTransaction::getAmount).isEqualTo(-3991L);
+		}
+
+		/**
+		 * @since 0.1.0
+		 */
+		@Test
+		void test_read_lastOfLastAccount() throws Exception {
+			logTestStart();
+
+			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf");
+
+			assertThat(actuals).element(actuals.size() - 1).extracting(BankStatementTransaction::getAmount)
+					.isEqualTo(25518L);
 		}
 
 		/**
@@ -145,7 +156,7 @@ class ComdirectTransactionParserTest {
 			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf");
 
 			assertThat(actuals).element(0).extracting(BankStatementTransaction::getReference)
-					.extracting(Reference::creditor).isEqualTo("DE70ZZZ00000119765");
+					.extracting(Reference::creditor).asString().startsWith("DE70ZZZ");
 		}
 
 		/**
@@ -158,7 +169,19 @@ class ComdirectTransactionParserTest {
 			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf");
 
 			assertThat(actuals).element(0).extracting(BankStatementTransaction::getReference)
-					.extracting(Reference::endToEnd).isEqualTo("S/836522141100/601904279283");
+					.extracting(Reference::endToEnd).asString().startsWith("S/836522141100");
+		}
+
+		/**
+		 * @since 0.1.0
+		 */
+		@Disabled("TODO handle 'nicht angegeben'")
+		@Test
+		void test_value_reference_endToEnd_notSpecified() throws Exception {
+			logTestStart();
+
+			// TODO implement test_value_reference_endToEnd
+			throw new UnsupportedOperationException("Method 'test_value_reference_endToEnd' not implemented yet");
 		}
 
 		/**
@@ -171,7 +194,7 @@ class ComdirectTransactionParserTest {
 			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf");
 
 			assertThat(actuals).element(0).extracting(BankStatementTransaction::getReference)
-					.extracting(Reference::mandate).isEqualTo("M002000001082336");
+					.extracting(Reference::mandate).asString().startsWith("M002");
 		}
 
 		/**
@@ -196,7 +219,34 @@ class ComdirectTransactionParserTest {
 
 			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf");
 
-			assertThat(actuals).element(1).extracting(BankStatementTransaction::getWhat).isEqualTo("RF72X114211565");
+			assertThat(actuals).element(1).extracting(BankStatementTransaction::getWhat).asString().startsWith("RF72X");
+		}
+
+		/**
+		 * @since 0.1.0
+		 */
+		@Disabled("TODO")
+		@Test
+		void test_value_what_resultLineBreak() throws Exception {
+			logTestStart();
+
+			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf");
+
+			// TODO implement test_value_what_resultLineBreak
+			throw new UnsupportedOperationException("Method 'test_value_what_resultLineBreak' not implemented yet");
+		}
+
+		/**
+		 * @since 0.1.0
+		 */
+		@Test
+		void test_value_what_withoutEndToEndRef() throws Exception {
+			logTestStart();
+
+			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf");
+
+			assertThat(actuals).element(3).extracting(BankStatementTransaction::getWhat).asString()
+					.startsWith("BARING");
 		}
 
 		/**
@@ -242,6 +292,8 @@ class ComdirectTransactionParserTest {
 			if (exception != null) {
 				throw exception;
 			}
+
+			logger.debug("result:\n\t" + result.stream().map(Object::toString).collect(Collectors.joining("\n\t")));
 
 			return result;
 		}

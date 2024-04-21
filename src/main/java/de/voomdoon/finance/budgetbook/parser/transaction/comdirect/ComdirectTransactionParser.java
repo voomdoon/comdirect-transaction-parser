@@ -64,6 +64,11 @@ public class ComdirectTransactionParser {
 	private static final int WIDTH = 595;
 
 	/**
+	 * @since 0.1.0
+	 */
+	private static final int Y_MIN = 50;
+
+	/**
 	 * DOCME add JavaDoc for method translate
 	 * 
 	 * @param rectangle
@@ -147,22 +152,26 @@ public class ComdirectTransactionParser {
 	 */
 	private LastEnd addTransactionsFromAccount(List<BankStatementTransaction> result, Account account, LastEnd lastEnd)
 			throws IOException {
-		int yStart = findHeightFromTop(reader, 1, account.name(), lastEnd.y());
-		yStart = findHeightFromTop(reader, 1, "Alter Saldo", yStart);
+		logger.debug("addTransactionsFromAccount " + account + " " + lastEnd);
+		int yStart = findHeightFromTop(reader, lastEnd.pageIndex(), account.name(), lastEnd.y());
+		yStart = findHeightFromTop(reader, lastEnd.pageIndex(), "Alter Saldo", yStart);
 		logger.debug("yStart: " + yStart);
 
 		LastEnd current = new LastEnd(lastEnd.pageIndex(), yStart);
 
 		while (true) {
-			current = maybeAddTransaction(result, account, current);
-
+			// OPTIMIZE speed: cache result for same page
 			int y = findHeightFromTop(reader, current.pageIndex, "Neuer Saldo", current.y());
 
-			if (y > -1) {
+			current = maybeAddTransaction(result, account, current, y);
+			logger.debug("current: " + current);
+
+			if (y > -1 && current.y() <= y) {
+				logger.info("done with account " + account + " y=" + y + " (current: " + current + ")");
 				break;
 			}
 
-			// if (result.size() > 8) {
+			// if (current.pageIndex() == 3) {
 			// logger.warn("DEBUG break");
 			// break;
 			// }
@@ -185,8 +194,12 @@ public class ComdirectTransactionParser {
 		LastEnd lastEnd = new LastEnd(1, accounts.yOverviewEnd());
 
 		for (Account account : accounts.accounts()) {
+			// FIXME accounts are not in order of overview
+			if (account.name().equals("Depot")) {
+				continue;
+			}
+
 			lastEnd = addTransactionsFromAccount(result, account, lastEnd);
-			break;// TODO !!!
 		}
 	}
 
@@ -303,12 +316,13 @@ public class ComdirectTransactionParser {
 	 * @since 0.1.0
 	 */
 	private int findHeightFromTop(PdfReader reader, int pageIndex, String content, int x0, int x1, int yFrom) {
+		// TODO use optional
 		StringBuilder sb = new StringBuilder();
 		sb.append("findHeightFromTop y=").append(yFrom).append(" '").append(content).append("' @").append(pageIndex)
 				.append(":");
 
 		// OPTIMIZE speed: maybe extract all rows at once
-		for (int y = yFrom; y >= 0; y--) {
+		for (int y = yFrom; y >= Y_MIN; y--) {
 			Rectangle rectangle = new Rectangle(x0, y, x1 - x0, 1);
 			String result = reader.readText(pageIndex, rectangle);
 
@@ -349,17 +363,28 @@ public class ComdirectTransactionParser {
 	 * @param result
 	 * @param account
 	 * @param lastEnd
+	 * @param yBottom
 	 * @return
 	 * @since 0.1.0
 	 */
-	private LastEnd maybeAddTransaction(List<BankStatementTransaction> result, Account account, LastEnd lastEnd) {
-		logger.debug("maybeAddTransaction " + lastEnd);
+	private LastEnd maybeAddTransaction(List<BankStatementTransaction> result, Account account, LastEnd lastEnd,
+			int yBottom) {
+		logger.debug("maybeAddTransaction " + lastEnd + " yBottom=" + yBottom);
+
+		// OPTIMIZE speed: increase initial search offset
+		// TODO move yLeft to right most position
 
 		BankStatementTransaction transaction = new BankStatementTransaction();
 
 		int xDateRight = 110;
 
 		int yBookingDate = findHeightFromTop(reader, lastEnd.pageIndex(), ".", 0, xDateRight, lastEnd.y() - 1);
+
+		if (yBookingDate < yBottom) {
+			logger.debug("bottom reaced");
+			return new LastEnd(lastEnd.pageIndex(), yBottom);
+		}
+
 		String bookingDate = readText(lastEnd.pageIndex(), new Rectangle(0, yBookingDate, xDateRight, 1));
 		logger.debug("booking date: '" + bookingDate + "' @y=" + yBookingDate);
 		transaction.setBookingDate(parseLocalDate(bookingDate));
@@ -378,6 +403,9 @@ public class ComdirectTransactionParser {
 			logger.debug("last transaction of page reached");
 			yNext = 60;
 			last = true;
+		} else if (yNext < yBottom) {
+			logger.debug("adjusting yNext to yBottom=" + yBottom);
+			yNext = yBottom;
 		}
 
 		int height = yBookingDate - yNext;
@@ -447,6 +475,7 @@ public class ComdirectTransactionParser {
 
 		if (endToEndRefIndex == -1) {
 			logger.debug("endToEndRefIndex: " + endToEndRefIndex);
+			transaction.setWhat(details);
 
 			return;
 		} else {
@@ -506,10 +535,10 @@ public class ComdirectTransactionParser {
 		List<Account> result = new ArrayList<>();
 
 		for (int y = yStartCurrency - 1; y > yEnd; y--) {
-			String name = reader.readText(1, new Rectangle(0, y, xNameRight, 1));
-			String iban = reader.readText(1, new Rectangle(xNameRight, y, xIbanRight - xNameRight, 1));
+			String name = readText(1, new Rectangle(0, y, xNameRight, 1));
+			String iban = readText(1, new Rectangle(xNameRight, y, xIbanRight - xNameRight, 1));
 
-			if (!name.isEmpty() && !iban.isEmpty()) {
+			if (!name.isEmpty()) {
 				result.add(new Account(name, iban.replace(" ", "")));
 			}
 		}
