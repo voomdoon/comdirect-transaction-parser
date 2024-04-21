@@ -7,8 +7,10 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -159,15 +161,18 @@ public class ComdirectTransactionParser {
 
 		LastEnd current = new LastEnd(lastEnd.pageIndex(), yStart);
 
-		while (true) {
-			// OPTIMIZE speed: cache result for same page
-			int y = findHeightFromTop(reader, current.pageIndex, "Neuer Saldo", current.y());
+		Map<Integer, Integer> newBalanceYCache = new HashMap<>();
 
-			current = maybeAddTransaction(result, account, current, y);
+		while (true) {
+			LastEnd temp = current;
+			int yNewBalance = newBalanceYCache.computeIfAbsent(current.pageIndex,
+					key -> findHeightFromTop(reader, temp.pageIndex(), "Neuer Saldo", temp.y()));
+
+			current = maybeAddTransaction(result, account, current, yNewBalance);
 			logger.debug("current: " + current);
 
-			if (y > -1 && current.y() <= y) {
-				logger.info("done with account " + account + " y=" + y + " (current: " + current + ")");
+			if (yNewBalance > -1 && current.y() <= yNewBalance) {
+				logger.info("done with account " + account + " y=" + yNewBalance + " (current: " + current + ")");
 				break;
 			}
 
@@ -516,6 +521,12 @@ public class ComdirectTransactionParser {
 
 		if (mandateIndex == -1) {
 			logger.debug("mandateIndex: " + mandateIndex);
+			String endToEnd = details.substring(endToEndRefIndex + 16).trim().replace("\r\n", " ");
+
+			if (!endToEnd.equals("nicht angegeben")) {
+				transaction.setReference(new Reference(endToEnd, null, null));
+			}
+
 			return;
 		}
 

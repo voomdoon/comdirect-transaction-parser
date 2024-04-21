@@ -9,7 +9,6 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
@@ -175,13 +174,13 @@ class ComdirectTransactionParserTest {
 		/**
 		 * @since 0.1.0
 		 */
-		@Disabled("TODO handle 'nicht angegeben'")
 		@Test
 		void test_value_reference_endToEnd_notSpecified() throws Exception {
 			logTestStart();
 
-			// TODO implement test_value_reference_endToEnd
-			throw new UnsupportedOperationException("Method 'test_value_reference_endToEnd' not implemented yet");
+			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf");
+
+			assertThat(actuals).element(1).extracting(BankStatementTransaction::getReference).isNull();
 		}
 
 		/**
