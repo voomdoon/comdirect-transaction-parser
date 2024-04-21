@@ -136,68 +136,6 @@ public class ComdirectTransactionParser {
 	}
 
 	/**
-	 * DOCME add JavaDoc for method addTransaction
-	 * 
-	 * @param result
-	 * @param account
-	 * @param lastEnd
-	 * @return
-	 * @since 0.1.0
-	 */
-	private LastEnd addTransaction(List<BankStatementTransaction> result, Account account, LastEnd lastEnd) {
-		logger.debug("addTransaction " + lastEnd);
-
-		BankStatementTransaction transaction = new BankStatementTransaction();
-
-		int xDateRight = 110;
-
-		int yBookingDate = findHeightFromTop(reader, 1, ".", 0, xDateRight, lastEnd.y() - 1);
-		String bookingDate = readText(lastEnd.pageIndex(), new Rectangle(0, yBookingDate, xDateRight, 1));
-		logger.debug("booking date: '" + bookingDate + "' @y=" + yBookingDate);
-		transaction.setBookingDate(parseLocalDate(bookingDate));
-
-		int yValuta = findHeightFromTop(reader, 1, ".", 0, xDateRight, yBookingDate - 1);
-		String valuta = readText(lastEnd.pageIndex(), new Rectangle(0, yValuta, xDateRight, 1));
-		logger.debug("valuta: '" + valuta + "' @y=" + yValuta);
-		transaction.setValuta(parseLocalDate(valuta));
-
-		int yNext = findHeightFromTop(reader, 1, ".", 0, xDateRight, yValuta - 1);
-		String next = readText(lastEnd.pageIndex(), new Rectangle(0, yNext, xDateRight, 1));
-		logger.debug("next: '" + next + "' @y=" + yNext);
-
-		int height = yBookingDate - yNext;
-
-		int xOtherAccountLeft = 185;
-		int xOtherAccountRight = 300;
-
-		String otherAccount = readText(lastEnd.pageIndex(),
-				new Rectangle(xOtherAccountLeft, yNext + 1, xOtherAccountRight - xOtherAccountLeft, height));
-		otherAccount = removeLineBreaks(otherAccount);
-		logger.debug("otherAccount: '" + otherAccount + "'");
-		transaction.setOtherAccount(otherAccount);
-
-		int xDetailsLeft = 300;
-		int xDetailsRight = 500;
-		String details = readText(lastEnd.pageIndex(),
-				new Rectangle(xDetailsLeft, yNext + 1, xDetailsRight - xDetailsLeft, height));
-		logger.debug("details: '" + details + "'");
-
-		processDetails(details, transaction);
-
-		int xAmountLeft = 500;
-		int xAmountRight = 560;
-		String amount = readText(lastEnd.pageIndex(),
-				new Rectangle(xAmountLeft, yNext + 1, xAmountRight - xAmountLeft, height));
-		amount = removeLineBreaks(amount);
-		logger.debug("amount: '" + amount + "'");
-		transaction.setAmount(Long.parseLong(amount.replace(",", "")));
-
-		result.add(transaction);
-
-		return new LastEnd(lastEnd.pageIndex(), yNext + 1);
-	}
-
-	/**
 	 * DOCME add JavaDoc for method addTransactionsFromAccount
 	 * 
 	 * @param result
@@ -216,12 +154,18 @@ public class ComdirectTransactionParser {
 		LastEnd current = new LastEnd(lastEnd.pageIndex(), yStart);
 
 		while (true) {
-			current = addTransaction(result, account, current);
+			current = maybeAddTransaction(result, account, current);
 
-			if (result.size() >= 1) {
-				logger.warn("DEBUG break");
+			int y = findHeightFromTop(reader, current.pageIndex, "Neuer Saldo", current.y());
+
+			if (y > -1) {
 				break;
 			}
+
+			// if (result.size() > 8) {
+			// logger.warn("DEBUG break");
+			// break;
+			// }
 		}
 
 		// TODO implement addTransactionsFromAccount
@@ -360,22 +304,122 @@ public class ComdirectTransactionParser {
 	 */
 	private int findHeightFromTop(PdfReader reader, int pageIndex, String content, int x0, int x1, int yFrom) {
 		StringBuilder sb = new StringBuilder();
-		sb.append("findHeightFromTop y=").append(yFrom).append(" '").append(content).append("' ").append(pageIndex)
+		sb.append("findHeightFromTop y=").append(yFrom).append(" '").append(content).append("' @").append(pageIndex)
 				.append(":");
 
+		// OPTIMIZE speed: maybe extract all rows at once
 		for (int y = yFrom; y >= 0; y--) {
-			String result = reader.readText(pageIndex, new Rectangle(x0, y, x1 - x0, 1));
+			Rectangle rectangle = new Rectangle(x0, y, x1 - x0, 1);
+			String result = reader.readText(pageIndex, rectangle);
 
-			if (result.contains(content)) {
-				return y;
+			if (!result.isEmpty()) {
+				sb.append("\n").append(y).append(": '").append(result).append("'");
 			}
 
-			sb.append("\n").append(y).append(": '").append(result).append("'");
+			if (result.contains(content)) {
+				highlightMatch(pageIndex, rectangle);
+				logger.trace(sb.toString());
+				return y;
+			}
 		}
 
-		logger.debug(sb.toString());
+		logger.trace(sb.toString());
 
 		return -1;
+	}
+
+	/**
+	 * DOCME add JavaDoc for method highlightMatch
+	 * 
+	 * @param pageIndex
+	 * @param rectangle
+	 * @since 0.1.0
+	 */
+	private void highlightMatch(int pageIndex, Rectangle rectangle) {
+		PdfGraphics graphics = PdfGraphics.create(reader.getDocument(), reader.getDocument().getPage(pageIndex));
+		graphics.setAlpha(0.25F);
+		graphics.setStrokingColor(Color.GREEN);
+		graphics.drawRectangle(translate(rectangle, 0, yDebugOffset));
+		graphics.close();
+	}
+
+	/**
+	 * DOCME add JavaDoc for method addTransaction
+	 * 
+	 * @param result
+	 * @param account
+	 * @param lastEnd
+	 * @return
+	 * @since 0.1.0
+	 */
+	private LastEnd maybeAddTransaction(List<BankStatementTransaction> result, Account account, LastEnd lastEnd) {
+		logger.debug("maybeAddTransaction " + lastEnd);
+
+		BankStatementTransaction transaction = new BankStatementTransaction();
+
+		int xDateRight = 110;
+
+		int yBookingDate = findHeightFromTop(reader, lastEnd.pageIndex(), ".", 0, xDateRight, lastEnd.y() - 1);
+		String bookingDate = readText(lastEnd.pageIndex(), new Rectangle(0, yBookingDate, xDateRight, 1));
+		logger.debug("booking date: '" + bookingDate + "' @y=" + yBookingDate);
+		transaction.setBookingDate(parseLocalDate(bookingDate));
+
+		int yValuta = findHeightFromTop(reader, lastEnd.pageIndex(), ".", 0, xDateRight, yBookingDate - 1);
+		String valuta = readText(lastEnd.pageIndex(), new Rectangle(0, yValuta, xDateRight, 1));
+		logger.debug("valuta: '" + valuta + "' @y=" + yValuta);
+		transaction.setValuta(parseLocalDate(valuta));
+
+		int yNext = findHeightFromTop(reader, lastEnd.pageIndex(), ".", 0, xDateRight, yValuta - 1);
+		String next = readText(lastEnd.pageIndex(), new Rectangle(0, yNext, xDateRight, 1));
+		logger.debug("next: '" + next + "' @y=" + yNext);
+		boolean last = false;
+
+		if (yNext == -1) {
+			logger.debug("last transaction of page reached");
+			yNext = 60;
+			last = true;
+		}
+
+		int height = yBookingDate - yNext;
+
+		int xOtherAccountLeft = 185;
+		int xOtherAccountRight = 300;
+
+		String otherAccount = readText(lastEnd.pageIndex(),
+				new Rectangle(xOtherAccountLeft, yNext + 1, xOtherAccountRight - xOtherAccountLeft, height));
+		otherAccount = removeLineBreaks(otherAccount);
+		logger.debug("otherAccount: '" + otherAccount + "'");
+		transaction.setOtherAccount(otherAccount);
+
+		int xDetailsLeft = 300;
+		int xDetailsRight = 500;
+		String details = readText(lastEnd.pageIndex(),
+				new Rectangle(xDetailsLeft, yNext + 1, xDetailsRight - xDetailsLeft, height));
+		logger.trace("details: '" + details + "'");
+
+		processDetails(details, transaction);
+
+		int xAmountLeft = 500;
+		int xAmountRight = 560;
+		String amount = readText(lastEnd.pageIndex(),
+				new Rectangle(xAmountLeft, yNext + 1, xAmountRight - xAmountLeft, height));
+		amount = removeLineBreaks(amount);
+		logger.debug("amount: '" + amount + "'");
+		transaction.setAmount(parseAmount(amount));
+
+		result.add(transaction);
+
+		if (last) {
+			logger.info("page end reached");
+			return new LastEnd(lastEnd.pageIndex() + 1, HEIGHT);
+
+		}
+
+		return new LastEnd(lastEnd.pageIndex(), yNext + 1);
+	}
+
+	private long parseAmount(String amount) {
+		return Long.parseLong(amount.replace(",", "").replace(".", ""));
 	}
 
 	/**
@@ -483,6 +527,7 @@ public class ComdirectTransactionParser {
 	 */
 	private String readText(int pageIndex, Rectangle rectangle) {
 		PdfGraphics graphics = PdfGraphics.create(reader.getDocument(), reader.getDocument().getPage(pageIndex));
+		graphics.setAlpha(0.25F);
 		graphics.setStrokingColor(Color.RED);
 		graphics.drawRectangle(translate(rectangle, 0, yDebugOffset));
 		graphics.close();
