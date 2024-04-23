@@ -66,7 +66,7 @@ public class ComdirectTransactionParser {
 	private static final int Y_MIN = 50;
 
 	/**
-	 * @since DOCME add inception version number
+	 * @since 0.1.0
 	 */
 	private static final int Y_TOP = 720;
 
@@ -233,7 +233,7 @@ public class ComdirectTransactionParser {
 	 * 
 	 * @param raw
 	 * @return
-	 * @since DOCME add inception version number
+	 * @since 0.1.0
 	 */
 	private String cleanWhat(String raw) {
 		String[] split = raw.split("\r\n");

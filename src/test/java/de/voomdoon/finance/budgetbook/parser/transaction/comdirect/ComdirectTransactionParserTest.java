@@ -307,7 +307,7 @@ class ComdirectTransactionParserTest {
 		 * 
 		 * @param input
 		 * @return
-		 * @since DOCME add inception version number
+		 * @since 0.1.0
 		 */
 		private Result parseTransactionsInternal(String input) {
 			Path source = Path.of(
