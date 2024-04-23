@@ -30,16 +30,6 @@
 			<artifactId>vd-pdf-util</artifactId>
 			<version>0.1.0-SNAPSHOT</version>
 		</dependency>
-		<dependency>
-			<groupId>de.voomdoon.logging</groupId>
-			<artifactId>vd-log4j2-logging-connector</artifactId>
-			<version>0.1.0-SNAPSHOT</version>
-		</dependency>
-		<dependency>
-			<groupId>de.voomdoon.util</groupId>
-			<artifactId>vd-csv-util</artifactId>
-			<version>0.1.0-SNAPSHOT</version>
-		</dependency>
 		<!-- - - - - - internal voomdoon compile dependencies - - - - - -->
 
 		<!-- + + + + + external compile dependencies + + + + + -->
