@@ -6,7 +6,7 @@
 	<parent>
 		<groupId>de.voomdoon.tool</groupId>
 		<artifactId>vd-tool-parent</artifactId>
-		<version>0.1.0-SNAPSHOT</version>
+		<version>0.2.0-SNAPSHOT</version>
 	</parent>
 
 	<groupId>de.voomdoon.finance.budgetbook.parser</groupId>
@@ -28,7 +28,7 @@
 		<dependency>
 			<groupId>de.voomdoon.util</groupId>
 			<artifactId>vd-pdf-util</artifactId>
-			<version>0.1.0-SNAPSHOT</version>
+			<version>0.2.0-SNAPSHOT</version>
 		</dependency>
 		<!-- - - - - - internal voomdoon compile dependencies - - - - - -->
 
@@ -47,7 +47,7 @@
 		<dependency>
 			<groupId>de.voomdoon.testing</groupId>
 			<artifactId>vd-test-util</artifactId>
-			<version>0.1.0-SNAPSHOT</version>
+			<version>0.2.0-SNAPSHOT</version>
 			<scope>test</scope>
 		</dependency>
 		<!-- - - - - - internal voomdoon test dependencies - - - - - -->
