@@ -14,9 +14,13 @@ import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import de.voomdoon.finance.budgetbook.model.BankStatementTransaction;
 import de.voomdoon.finance.budgetbook.model.Reference;
+import de.voomdoon.testing.file.TempFileExtension;
+import de.voomdoon.testing.file.TempInputFile;
+import de.voomdoon.testing.file.WithTempInputFiles;
 import de.voomdoon.testing.tests.TestBase;
 
 /**
@@ -36,8 +40,13 @@ class ComdirectTransactionParserTest {
 	 * @since 0.1.0
 	 */
 	@Nested
+	@ExtendWith(TempFileExtension.class)
+	@WithTempInputFiles(extension = "pdf")
 	class ParseTransactionsTest extends TestBase {
 
+		/**
+		 * @since 0.1.0
+		 */
 		private record Result(List<BankStatementTransaction> data, Exception exception) {
 		}
 
@@ -50,10 +59,10 @@ class ComdirectTransactionParserTest {
 		 * @since 0.1.0
 		 */
 		@Test
-		void test_read_endOfAccount() throws Exception {
+		void test_read_endOfAccount(@TempInputFile String input) throws Exception {
 			logTestStart();
 
-			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2018-03-01.pdf");
+			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2018-03-01.pdf", input);
 
 			assertThat(actuals).element(39).extracting(BankStatementTransaction::getAmount).isEqualTo(2182L);
 		}
@@ -62,10 +71,10 @@ class ComdirectTransactionParserTest {
 		 * @since 0.1.0
 		 */
 		@Test
-		void test_read_endOfAccountAtPageEnd() throws Exception {
+		void test_read_endOfAccountAtPageEnd(@TempInputFile String input) throws Exception {
 			logTestStart();
 
-			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2018-04-03.pdf");
+			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2018-04-03.pdf", input);
 
 			assertThat(actuals).element(29).extracting(BankStatementTransaction::getAmount).isEqualTo(-990L);
 		}
@@ -74,10 +83,10 @@ class ComdirectTransactionParserTest {
 		 * @since 0.1.0
 		 */
 		@Test
-		void test_read_endOfdFirstAccount() throws Exception {
+		void test_read_endOfdFirstAccount(@TempInputFile String input) throws Exception {
 			logTestStart();
 
-			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf");
+			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf", input);
 
 			assertThat(actuals).element(44).extracting(BankStatementTransaction::getAmount).isEqualTo(-6820L);
 		}
@@ -86,10 +95,10 @@ class ComdirectTransactionParserTest {
 		 * @since 0.1.0
 		 */
 		@Test
-		void test_read_lastOfFirstAccountPage() throws Exception {
+		void test_read_lastOfFirstAccountPage(@TempInputFile String input) throws Exception {
 			logTestStart();
 
-			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf");
+			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf", input);
 
 			assertThat(actuals).element(7).extracting(BankStatementTransaction::getAmount).isEqualTo(-3991L);
 		}
@@ -98,10 +107,10 @@ class ComdirectTransactionParserTest {
 		 * @since 0.1.0
 		 */
 		@Test
-		void test_read_lastOfLastAccount() throws Exception {
+		void test_read_lastOfLastAccount(@TempInputFile String input) throws Exception {
 			logTestStart();
 
-			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf");
+			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf", input);
 
 			assertThat(actuals).element(actuals.size() - 1).extracting(BankStatementTransaction::getAmount)
 					.isEqualTo(25518L);
@@ -111,10 +120,10 @@ class ComdirectTransactionParserTest {
 		 * @since 0.1.0
 		 */
 		@Test
-		void test_read_nextPageOfFistAccount() throws Exception {
+		void test_read_nextPageOfFistAccount(@TempInputFile String input) throws Exception {
 			logTestStart();
 
-			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf");
+			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf", input);
 
 			assertThat(actuals).element(8).extracting(BankStatementTransaction::getWhat).asString().startsWith("BGF");
 		}
@@ -123,10 +132,10 @@ class ComdirectTransactionParserTest {
 		 * @since 0.1.0
 		 */
 		@Test
-		void test_read_secondRow() throws Exception {
+		void test_read_secondRow(@TempInputFile String input) throws Exception {
 			logTestStart();
 
-			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf");
+			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf", input);
 
 			assertThat(actuals).element(1).extracting(BankStatementTransaction::getBookingDate)
 					.isEqualTo(LocalDate.of(2017, 5, 5));
@@ -136,10 +145,10 @@ class ComdirectTransactionParserTest {
 		 * @since 0.1.0
 		 */
 		@Test
-		void test_value_amount() throws Exception {
+		void test_value_amount(@TempInputFile String input) throws Exception {
 			logTestStart();
 
-			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf");
+			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf", input);
 
 			assertThat(actuals).element(0).extracting(BankStatementTransaction::getAmount).isEqualTo(-3700L);
 		}
@@ -148,10 +157,10 @@ class ComdirectTransactionParserTest {
 		 * @since 0.1.0
 		 */
 		@Test
-		void test_value_bookingDate() throws Exception {
+		void test_value_bookingDate(@TempInputFile String input) throws Exception {
 			logTestStart();
 
-			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf");
+			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf", input);
 
 			assertThat(actuals).element(0).extracting(BankStatementTransaction::getBookingDate)
 					.isEqualTo(LocalDate.of(2017, 5, 4));
@@ -161,10 +170,10 @@ class ComdirectTransactionParserTest {
 		 * @since 0.1.0
 		 */
 		@Test
-		void test_value_otherAccount() throws Exception {
+		void test_value_otherAccount(@TempInputFile String input) throws Exception {
 			logTestStart();
 
-			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf");
+			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf", input);
 
 			assertThat(actuals).element(0).extracting(BankStatementTransaction::getOtherAccount)
 					.isEqualTo("VATTENFALL EUROPE SALES");
@@ -174,10 +183,10 @@ class ComdirectTransactionParserTest {
 		 * @since 0.1.0
 		 */
 		@Test
-		void test_value_reference_creditor() throws Exception {
+		void test_value_reference_creditor(@TempInputFile String input) throws Exception {
 			logTestStart();
 
-			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf");
+			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf", input);
 
 			assertThat(actuals).element(0).extracting(BankStatementTransaction::getReference)
 					.extracting(Reference::creditor).asString().startsWith("DE70ZZZ");
@@ -187,10 +196,10 @@ class ComdirectTransactionParserTest {
 		 * @since 0.1.0
 		 */
 		@Test
-		void test_value_reference_endToEnd() throws Exception {
+		void test_value_reference_endToEnd(@TempInputFile String input) throws Exception {
 			logTestStart();
 
-			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf");
+			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf", input);
 
 			assertThat(actuals).element(0).extracting(BankStatementTransaction::getReference)
 					.extracting(Reference::endToEnd).asString().startsWith("S/836522141100");
@@ -200,10 +209,10 @@ class ComdirectTransactionParserTest {
 		 * @since 0.1.0
 		 */
 		@Test
-		void test_value_reference_endToEnd_notSpecified() throws Exception {
+		void test_value_reference_endToEnd_notSpecified(@TempInputFile String input) throws Exception {
 			logTestStart();
 
-			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf");
+			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf", input);
 
 			assertThat(actuals).element(1).extracting(BankStatementTransaction::getReference).isNull();
 		}
@@ -212,10 +221,10 @@ class ComdirectTransactionParserTest {
 		 * @since 0.1.0
 		 */
 		@Test
-		void test_value_reference_mandate() throws Exception {
+		void test_value_reference_mandate(@TempInputFile String input) throws Exception {
 			logTestStart();
 
-			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf");
+			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf", input);
 
 			assertThat(actuals).element(0).extracting(BankStatementTransaction::getReference)
 					.extracting(Reference::mandate).asString().startsWith("M002");
@@ -225,10 +234,10 @@ class ComdirectTransactionParserTest {
 		 * @since 0.1.0
 		 */
 		@Test
-		void test_value_valuta() throws Exception {
+		void test_value_valuta(@TempInputFile String input) throws Exception {
 			logTestStart();
 
-			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf");
+			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf", input);
 
 			assertThat(actuals).element(0).extracting(BankStatementTransaction::getValuta)
 					.isEqualTo(LocalDate.of(2017, 5, 4));
@@ -238,10 +247,10 @@ class ComdirectTransactionParserTest {
 		 * @since 0.1.0
 		 */
 		@Test
-		void test_value_what() throws Exception {
+		void test_value_what(@TempInputFile String input) throws Exception {
 			logTestStart();
 
-			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf");
+			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf", input);
 
 			assertThat(actuals).element(1).extracting(BankStatementTransaction::getWhat).asString().startsWith("RF72X");
 		}
@@ -250,10 +259,10 @@ class ComdirectTransactionParserTest {
 		 * @since 0.1.0
 		 */
 		@Test
-		void test_value_what_removeLikeBreak_Einkauf() throws Exception {
+		void test_value_what_removeLikeBreak_Einkauf(@TempInputFile String input) throws Exception {
 			logTestStart();
 
-			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf");
+			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf", input);
 
 			assertThat(actuals).element(31).extracting(BankStatementTransaction::getWhat).asString()
 					.contains("Einkauf");
@@ -263,10 +272,10 @@ class ComdirectTransactionParserTest {
 		 * @since 0.1.0
 		 */
 		@Test
-		void test_value_what_removeLikeBreak_length() throws Exception {
+		void test_value_what_removeLikeBreak_length(@TempInputFile String input) throws Exception {
 			logTestStart();
 
-			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf");
+			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf", input);
 
 			assertThat(actuals).element(28).extracting(BankStatementTransaction::getWhat).asString().contains("7027");
 		}
@@ -275,10 +284,10 @@ class ComdirectTransactionParserTest {
 		 * @since 0.1.0
 		 */
 		@Test
-		void test_value_what_withoutEndToEndRef() throws Exception {
+		void test_value_what_withoutEndToEndRef(@TempInputFile String input) throws Exception {
 			logTestStart();
 
-			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf");
+			List<BankStatementTransaction> actuals = parseTransactions("Finanzreport_2017-06-02.pdf", input);
 
 			assertThat(actuals).element(3).extracting(BankStatementTransaction::getWhat).asString()
 					.startsWith("BARING");
@@ -287,13 +296,14 @@ class ComdirectTransactionParserTest {
 		/**
 		 * DOCME add JavaDoc for method run
 		 * 
+		 * @param source
 		 * @param input
 		 * @return
 		 * @throws Exception
 		 * @since 0.1.0
 		 */
-		private List<BankStatementTransaction> parseTransactions(String input) throws Exception {
-			Result result = RESULTS.computeIfAbsent(input, key -> parseTransactionsInternal(input));
+		private List<BankStatementTransaction> parseTransactions(String source, String input) throws Exception {
+			Result result = RESULTS.computeIfAbsent(source, key -> parseTransactionsInternal(source, input));
 
 			if (result.exception() != null) {
 				throw result.exception();
@@ -305,25 +315,23 @@ class ComdirectTransactionParserTest {
 		/**
 		 * DOCME add JavaDoc for method parseTransactionsInternal
 		 * 
+		 * @param source
 		 * @param input
 		 * @return
 		 * @since 0.1.0
 		 */
-		private Result parseTransactionsInternal(String input) {
-			Path source = Path.of(
+		private Result parseTransactionsInternal(String source, String input) {
+			Path sourcePath = Path.of(
 					"C:/workspaces/vd/public-finance/comdirect-transaction-parser-private-test-data/src/test/resources",
-					input);
-			Path target;
-
+					source);
 			try {
-				target = Path.of(getTempDirectory().toString(), "input.pdf");
-				Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
+				Files.copy(sourcePath, Path.of(input), StandardCopyOption.REPLACE_EXISTING);
 			} catch (IOException e) {
 				// TODO implement error handling
 				throw new RuntimeException("Error at 'parseTransactionsInternal': " + e.getMessage(), e);
 			}
 
-			ComdirectTransactionParser parser = new ComdirectTransactionParser(target.toString());
+			ComdirectTransactionParser parser = new ComdirectTransactionParser(input);
 
 			List<BankStatementTransaction> result = null;
 			Exception exception = null;
@@ -337,7 +345,7 @@ class ComdirectTransactionParserTest {
 			try {
 				parser.saveDebug(
 						"C:/workspaces/vd/public-finance/comdirect-transaction-parser-private-test-data/src/test/resources/"
-								+ input.substring(0, input.lastIndexOf('.')) + "_parsing.pdf");
+								+ source.substring(0, source.lastIndexOf('.')) + "_parsing.pdf");
 			} catch (Exception e) {
 				logger.warn("Failed to save debug file: " + e.getMessage());
 			}
